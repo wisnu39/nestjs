@@ -1,9 +1,9 @@
 {
-  "name": "nest-typescript-starter",
+  "name": "backend-Adhitama",
   "private": true,
   "type": "module",
   "version": "1.0.0",
-  "description": "Nest TypeScript starter repository",
+  "description": "Backend API for Adhitama",
   "license": "MIT",
   "scripts": {
     "build": "nest build",
