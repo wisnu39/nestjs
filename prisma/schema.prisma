@@ -1,0 +1,161 @@
+// This is your Prisma schema file,
+// learn more about it in the docs: https://pris.ly/d/prisma-schema
+
+// Get a free hosted Postgres database in seconds: `npx create-db`
+
+generator client {
+  provider     = "prisma-client"
+  output       = "../src/core/database/generated"
+  moduleFormat = "cjs"
+  
+}
+
+datasource db {
+  provider = "mysql"
+}
+
+// modules
+
+model Tenant {
+  id        String   @id @default(uuid())
+  name      String
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  karyawans Karyawan[]
+  roles     Role[]
+  gudangs   Gudang[]
+
+  @@index([name])
+}
+
+model Karyawan {
+  id        String   @id @default(uuid())
+  nip       String
+  password  String
+
+  tenantId  String
+  roleId    String
+
+  isActive  Boolean  @default(true)
+  isBlocked Boolean  @default(false)
+  deletedAt DateTime?
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  tenant Tenant @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  role   Role   @relation(fields: [roleId], references: [id])
+
+  sessions Session[]
+  tokens   RefreshToken[]
+  auditLogs AuditLog[]
+
+  @@unique([nip, tenantId])
+  @@index([tenantId])
+  @@index([roleId])
+  @@index([deletedAt])
+}
+
+model Role {
+  id        String   @id @default(uuid())
+  name      String
+
+  tenantId  String
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  karyawans Karyawan[]
+  permissions RolePermission[]
+
+  tenant Tenant @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+
+  @@unique([name, tenantId])
+  @@index([tenantId])
+}
+
+model Permission {
+  id   String @id @default(uuid())
+  name String @unique
+
+  roles RolePermission[]
+
+  @@index([name])
+}
+
+model RolePermission {
+  id           String @id @default(uuid())
+  roleId       String
+  permissionId String
+
+  role       Role       @relation(fields: [roleId], references: [id], onDelete: Cascade)
+  permission Permission @relation(fields: [permissionId], references: [id], onDelete: Cascade)
+
+  @@unique([roleId, permissionId])
+  @@index([roleId])
+  @@index([permissionId])
+}
+
+model Gudang {
+  id        String   @id @default(uuid())
+  name      String
+
+  tenantId  String
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  tenant Tenant @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+
+  @@unique([name, tenantId])
+  @@index([tenantId])
+}
+
+model Session {
+  id          String   @id @default(uuid())
+  karyawanId  String
+  isActive    Boolean  @default(true)
+  createdAt   DateTime @default(now())
+
+  karyawan Karyawan @relation(fields: [karyawanId], references: [id], onDelete: Cascade)
+  tokens   RefreshToken[]
+
+  @@index([karyawanId])
+  @@index([isActive])
+}
+
+model RefreshToken {
+  id          String   @id @default(uuid())
+  karyawanId  String
+  sessionId   String
+  tokenId     String   @unique
+  tokenHash   String
+  isRevoked   Boolean  @default(false)
+  expiresAt   DateTime
+  createdAt   DateTime @default(now())
+
+  karyawan Karyawan @relation(fields: [karyawanId], references: [id], onDelete: Cascade)
+  session  Session  @relation(fields: [sessionId], references: [id], onDelete: Cascade)
+
+  @@index([karyawanId])
+  @@index([sessionId])
+  @@index([expiresAt])
+  @@index([isRevoked])
+}
+
+model AuditLog {
+  id          String   @id @default(uuid())
+  karyawanId  String?
+  action      String
+  entity      String
+  entityId    String?
+  metadata    Json?
+
+  createdAt   DateTime @default(now())
+
+  karyawan Karyawan? @relation(fields: [karyawanId], references: [id], onDelete: SetNull)
+
+  @@index([karyawanId])
+  @@index([action])
+}
